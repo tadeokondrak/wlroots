@@ -207,6 +207,7 @@ static void refresh_state(struct keyboard_group_device *device,
 		clock_gettime(CLOCK_MONOTONIC, &now);
 		struct wlr_event_keyboard_key event = {
 			.time_msec = (int64_t)now.tv_sec * 1000 + now.tv_nsec / 1000000,
+			.time_nsec = (int64_t)now.tv_sec * 1000000000 + now.tv_nsec,
 			.keycode = device->keyboard->keycodes[i],
 			.update_state = true,
 			.state = state
