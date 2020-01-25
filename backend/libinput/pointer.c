@@ -32,8 +32,9 @@ void handle_pointer_motion(struct libinput_event *event,
 		libinput_event_get_pointer_event(event);
 	struct wlr_event_pointer_motion wlr_event = { 0 };
 	wlr_event.device = wlr_dev;
-	wlr_event.time_msec =
-		usec_to_msec(libinput_event_pointer_get_time_usec(pevent));
+	uint64_t time_usec = libinput_event_pointer_get_time_usec(pevent);
+	wlr_event.time_msec = usec_to_msec(time_usec);
+	wlr_event.time_nsec = time_usec * 1000;
 	wlr_event.delta_x = libinput_event_pointer_get_dx(pevent);
 	wlr_event.delta_y = libinput_event_pointer_get_dy(pevent);
 	wlr_event.unaccel_dx = libinput_event_pointer_get_dx_unaccelerated(pevent);
@@ -54,8 +55,9 @@ void handle_pointer_motion_abs(struct libinput_event *event,
 		libinput_event_get_pointer_event(event);
 	struct wlr_event_pointer_motion_absolute wlr_event = { 0 };
 	wlr_event.device = wlr_dev;
-	wlr_event.time_msec =
-		usec_to_msec(libinput_event_pointer_get_time_usec(pevent));
+	uint64_t time_usec = libinput_event_pointer_get_time_usec(pevent);
+	wlr_event.time_msec = usec_to_msec(time_usec);
+	wlr_event.time_nsec = time_usec * 1000;
 	wlr_event.x = libinput_event_pointer_get_absolute_x_transformed(pevent, 1);
 	wlr_event.y = libinput_event_pointer_get_absolute_y_transformed(pevent, 1);
 	wlr_signal_emit_safe(&wlr_dev->pointer->events.motion_absolute, &wlr_event);
@@ -74,8 +76,9 @@ void handle_pointer_button(struct libinput_event *event,
 		libinput_event_get_pointer_event(event);
 	struct wlr_event_pointer_button wlr_event = { 0 };
 	wlr_event.device = wlr_dev;
-	wlr_event.time_msec =
-		usec_to_msec(libinput_event_pointer_get_time_usec(pevent));
+	uint64_t time_usec = libinput_event_pointer_get_time_usec(pevent);
+	wlr_event.time_msec = usec_to_msec(time_usec);
+	wlr_event.time_nsec = time_usec * 1000;
 	wlr_event.button = libinput_event_pointer_get_button(pevent);
 	switch (libinput_event_pointer_get_button_state(pevent)) {
 	case LIBINPUT_BUTTON_STATE_PRESSED:
@@ -100,9 +103,10 @@ void handle_pointer_axis(struct libinput_event *event,
 	struct libinput_event_pointer *pevent =
 		libinput_event_get_pointer_event(event);
 	struct wlr_event_pointer_axis wlr_event = { 0 };
+	uint64_t time_usec = libinput_event_pointer_get_time_usec(pevent);
 	wlr_event.device = wlr_dev;
-	wlr_event.time_msec =
-		usec_to_msec(libinput_event_pointer_get_time_usec(pevent));
+	wlr_event.time_msec = usec_to_msec(time_usec);
+	wlr_event.time_nsec = time_usec * 1000;
 	switch (libinput_event_pointer_get_axis_source(pevent)) {
 	case LIBINPUT_POINTER_AXIS_SOURCE_WHEEL:
 		wlr_event.source = WLR_AXIS_SOURCE_WHEEL;
@@ -151,10 +155,11 @@ void handle_pointer_swipe_begin(struct libinput_event *event,
 	}
 	struct libinput_event_gesture *gevent =
 		libinput_event_get_gesture_event(event);
+	uint64_t time_usec = libinput_event_gesture_get_time_usec(gevent);
 	struct wlr_event_pointer_swipe_begin wlr_event = {
 		.device = wlr_dev,
-		.time_msec =
-			usec_to_msec(libinput_event_gesture_get_time_usec(gevent)),
+		.time_msec = usec_to_msec(time_usec),
+		.time_nsec = time_usec * 1000,
 		.fingers = libinput_event_gesture_get_finger_count(gevent),
 	};
 	wlr_signal_emit_safe(&wlr_dev->pointer->events.swipe_begin, &wlr_event);
@@ -170,10 +175,11 @@ void handle_pointer_swipe_update(struct libinput_event *event,
 	}
 	struct libinput_event_gesture *gevent =
 		libinput_event_get_gesture_event(event);
+	uint64_t time_usec = libinput_event_gesture_get_time_usec(gevent);
 	struct wlr_event_pointer_swipe_update wlr_event = {
 		.device = wlr_dev,
-		.time_msec =
-			usec_to_msec(libinput_event_gesture_get_time_usec(gevent)),
+		.time_msec = usec_to_msec(time_usec),
+		.time_nsec = time_usec * 1000,
 		.fingers = libinput_event_gesture_get_finger_count(gevent),
 		.dx = libinput_event_gesture_get_dx(gevent),
 		.dy = libinput_event_gesture_get_dy(gevent),
@@ -191,10 +197,11 @@ void handle_pointer_swipe_end(struct libinput_event *event,
 	}
 	struct libinput_event_gesture *gevent =
 		libinput_event_get_gesture_event(event);
+	uint64_t time_usec = libinput_event_gesture_get_time_usec(gevent);
 	struct wlr_event_pointer_swipe_end wlr_event = {
 		.device = wlr_dev,
-		.time_msec =
-			usec_to_msec(libinput_event_gesture_get_time_usec(gevent)),
+		.time_msec = usec_to_msec(time_usec),
+		.time_nsec = time_usec * 1000,
 		.cancelled = libinput_event_gesture_get_cancelled(gevent),
 	};
 	wlr_signal_emit_safe(&wlr_dev->pointer->events.swipe_end, &wlr_event);
@@ -210,10 +217,11 @@ void handle_pointer_pinch_begin(struct libinput_event *event,
 	}
 	struct libinput_event_gesture *gevent =
 		libinput_event_get_gesture_event(event);
+	uint64_t time_usec = libinput_event_gesture_get_time_usec(gevent);
 	struct wlr_event_pointer_pinch_begin wlr_event = {
 		.device = wlr_dev,
-		.time_msec =
-			usec_to_msec(libinput_event_gesture_get_time_usec(gevent)),
+		.time_msec = usec_to_msec(time_usec),
+		.time_nsec = time_usec * 1000,
 		.fingers = libinput_event_gesture_get_finger_count(gevent),
 	};
 	wlr_signal_emit_safe(&wlr_dev->pointer->events.pinch_begin, &wlr_event);
@@ -229,10 +237,11 @@ void handle_pointer_pinch_update(struct libinput_event *event,
 	}
 	struct libinput_event_gesture *gevent =
 		libinput_event_get_gesture_event(event);
+	uint64_t time_usec = libinput_event_gesture_get_time_usec(gevent);
 	struct wlr_event_pointer_pinch_update wlr_event = {
 		.device = wlr_dev,
-		.time_msec =
-			usec_to_msec(libinput_event_gesture_get_time_usec(gevent)),
+		.time_msec = usec_to_msec(time_usec),
+		.time_nsec = time_usec * 1000,
 		.fingers = libinput_event_gesture_get_finger_count(gevent),
 		.dx = libinput_event_gesture_get_dx(gevent),
 		.dy = libinput_event_gesture_get_dy(gevent),
@@ -252,10 +261,11 @@ void handle_pointer_pinch_end(struct libinput_event *event,
 	}
 	struct libinput_event_gesture *gevent =
 		libinput_event_get_gesture_event(event);
+	uint64_t time_usec = libinput_event_gesture_get_time_usec(gevent);
 	struct wlr_event_pointer_pinch_end wlr_event = {
 		.device = wlr_dev,
-		.time_msec =
-			usec_to_msec(libinput_event_gesture_get_time_usec(gevent)),
+		.time_msec = usec_to_msec(time_usec),
+		.time_nsec = time_usec * 1000,
 		.cancelled = libinput_event_gesture_get_cancelled(gevent),
 	};
 	wlr_signal_emit_safe(&wlr_dev->pointer->events.pinch_end, &wlr_event);
