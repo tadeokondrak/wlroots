@@ -27,6 +27,7 @@ protocols = {
 	'xdg-decoration-unstable-v1': wl_protocol_dir / 'unstable/xdg-decoration/xdg-decoration-unstable-v1.xml',
 	'xdg-output-unstable-v1': wl_protocol_dir / 'unstable/xdg-output/xdg-output-unstable-v1.xml',
 	'xdg-shell-unstable-v6': wl_protocol_dir / 'unstable/xdg-shell/xdg-shell-unstable-v6.xml',
+	'input-timestamps-unstable-v1': wl_protocol_dir / 'unstable/input-timestamps/input-timestamps-unstable-v1.xml',
 	# Other protocols
 	'gtk-primary-selection': 'gtk-primary-selection.xml',
 	'kde-idle': 'idle.xml',

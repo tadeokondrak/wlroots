@@ -38,6 +38,11 @@ struct wlr_wl_backend {
 	struct wp_presentation *presentation;
 	struct zwp_linux_dmabuf_v1 *zwp_linux_dmabuf_v1;
 	struct zwp_relative_pointer_manager_v1 *zwp_relative_pointer_manager_v1;
+	struct zwp_input_timestamps_manager_v1 *zwp_input_timestamps_manager_v1;
+	struct {
+		struct timespec pointer;
+		struct timespec keyboard;
+	} input_timestamps_v1;
 	struct wl_seat *seat;
 	struct wl_pointer *pointer;
 	struct wl_keyboard *keyboard;

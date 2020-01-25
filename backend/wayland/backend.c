@@ -17,6 +17,7 @@
 
 #include "backend/wayland.h"
 #include "util/signal.h"
+#include "input-timestamps-unstable-v1-client-protocol.h"
 #include "linux-dmabuf-unstable-v1-client-protocol.h"
 #include "pointer-gestures-unstable-v1-client-protocol.h"
 #include "presentation-time-client-protocol.h"
@@ -131,6 +132,9 @@ static void registry_global(void *data, struct wl_registry *registry,
 	} else if (strcmp(iface, zwp_relative_pointer_manager_v1_interface.name) == 0) {
 		wl->zwp_relative_pointer_manager_v1 = wl_registry_bind(registry, name,
 			&zwp_relative_pointer_manager_v1_interface, 1);
+	} else if (strcmp(iface, zwp_input_timestamps_manager_v1_interface.name) == 0) {
+		wl->zwp_input_timestamps_manager_v1 = wl_registry_bind(registry, name,
+			&zwp_input_timestamps_manager_v1_interface, 1);
 	}
 }
 

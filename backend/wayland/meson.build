@@ -6,6 +6,7 @@ wlr_files += files(
 )
 
 client_protos = [
+	'input-timestamps-unstable-v1',
 	'linux-dmabuf-unstable-v1',
 	'pointer-gestures-unstable-v1',
 	'presentation-time',

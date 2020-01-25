@@ -15,6 +15,7 @@
 #include <wlr/interfaces/wlr_touch.h>
 #include <wlr/util/log.h>
 
+#include "input-timestamps-unstable-v1-client-protocol.h"
 #include "pointer-gestures-unstable-v1-client-protocol.h"
 #include "relative-pointer-unstable-v1-client-protocol.h"
 #include "backend/wayland.h"
@@ -71,6 +72,10 @@ static void pointer_handle_leave(void *data, struct wl_pointer *wl_pointer,
 	backend->current_pointer = NULL;
 }
 
+static uint64_t timespec_to_nsec(struct timespec time) {
+	return (int64_t)time.tv_sec * 1000000000 + time.tv_nsec;
+}
+
 static void pointer_handle_motion(void *data, struct wl_pointer *wl_pointer,
 		uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {
 	struct wlr_wl_backend *backend = data;
@@ -80,9 +85,17 @@ static void pointer_handle_motion(void *data, struct wl_pointer *wl_pointer,
 	}
 
 	struct wlr_output *wlr_output = &pointer->output->wlr_output;
+	uint64_t time_nsec;
+	if (backend->zwp_input_timestamps_manager_v1 &&
+			backend->input_timestamps_v1.pointer.tv_sec == time / 1000) {
+		time_nsec = timespec_to_nsec(backend->input_timestamps_v1.pointer);
+	} else {
+		time_nsec = time * 1000000;
+	}
 	struct wlr_event_pointer_motion_absolute event = {
 		.device = &pointer->input_device->wlr_input_device,
 		.time_msec = time,
+		.time_nsec = time_nsec,
 		.x = wl_fixed_to_double(sx) / wlr_output->width,
 		.y = wl_fixed_to_double(sy) / wlr_output->height,
 	};
@@ -97,11 +110,19 @@ static void pointer_handle_button(void *data, struct wl_pointer *wl_pointer,
 		return;
 	}
 
+	uint64_t time_nsec;
+	if (backend->zwp_input_timestamps_manager_v1 &&
+			backend->input_timestamps_v1.pointer.tv_sec == time / 1000) {
+		time_nsec = timespec_to_nsec(backend->input_timestamps_v1.pointer);
+	} else {
+		time_nsec = time * 1000000;
+	}
 	struct wlr_event_pointer_button event = {
 		.device = &pointer->input_device->wlr_input_device,
 		.button = button,
 		.state = state,
 		.time_msec = time,
+		.time_nsec = time_nsec,
 	};
 	wlr_signal_emit_safe(&pointer->wlr_pointer.events.button, &event);
 }
@@ -114,12 +135,20 @@ static void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer,
 		return;
 	}
 
+	uint64_t time_nsec;
+	if (backend->zwp_input_timestamps_manager_v1 &&
+			backend->input_timestamps_v1.pointer.tv_sec == time / 1000) {
+		time_nsec = timespec_to_nsec(backend->input_timestamps_v1.pointer);
+	} else {
+		time_nsec = time * 1000000;
+	}
 	struct wlr_event_pointer_axis event = {
 		.device = &pointer->input_device->wlr_input_device,
 		.delta = wl_fixed_to_double(value),
 		.delta_discrete = pointer->axis_discrete,
 		.orientation = axis,
 		.time_msec = time,
+		.time_nsec = time_nsec,
 		.source = pointer->axis_source,
 	};
 	wlr_signal_emit_safe(&pointer->wlr_pointer.events.axis, &event);
@@ -157,12 +186,20 @@ static void pointer_handle_axis_stop(void *data, struct wl_pointer *wl_pointer,
 		return;
 	}
 
+	uint64_t time_nsec;
+	if (backend->zwp_input_timestamps_manager_v1 &&
+			backend->input_timestamps_v1.pointer.tv_sec == time / 1000) {
+		time_nsec = timespec_to_nsec(backend->input_timestamps_v1.pointer);
+	} else {
+		time_nsec = time * 1000000;
+	}
 	struct wlr_event_pointer_axis event = {
 		.device = &pointer->input_device->wlr_input_device,
 		.delta = 0,
 		.delta_discrete = 0,
 		.orientation = axis,
 		.time_msec = time,
+		.time_nsec = time_nsec,
 		.source = pointer->axis_source,
 	};
 	wlr_signal_emit_safe(&pointer->wlr_pointer.events.axis, &event);
@@ -196,24 +233,26 @@ static void keyboard_handle_keymap(void *data, struct wl_keyboard *wl_keyboard,
 	// TODO: set keymap
 }
 
-static uint32_t get_current_time_msec(void) {
+static uint64_t get_current_time_nsec(void) {
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	return now.tv_nsec / 1000;
+	return timespec_to_nsec(now);
 }
 
 static void keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, struct wl_surface *surface, struct wl_array *keys) {
-	struct wlr_input_device *dev = data;
+	struct wlr_wl_input_device *wl_dev = data;
+	struct wlr_input_device *dev = &wl_dev->wlr_input_device;
 
-	uint32_t time = get_current_time_msec();
+	uint64_t time_nsec = get_current_time_nsec();
 
 	uint32_t *keycode_ptr;
 	wl_array_for_each(keycode_ptr, keys) {
 		struct wlr_event_keyboard_key event = {
 			.keycode = *keycode_ptr,
 			.state = WLR_KEY_PRESSED,
-			.time_msec = time,
+			.time_msec = time_nsec / 1000000,
+			.time_nsec = time_nsec,
 			.update_state = false,
 		};
 		wlr_keyboard_notify_key(dev->keyboard, &event);
@@ -222,9 +261,10 @@ static void keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
 
 static void keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, struct wl_surface *surface) {
-	struct wlr_input_device *dev = data;
+	struct wlr_wl_input_device *wl_dev = data;
+	struct wlr_input_device *dev = &wl_dev->wlr_input_device;
 
-	uint32_t time = get_current_time_msec();
+	uint64_t time_nsec = get_current_time_nsec();
 
 	uint32_t pressed[dev->keyboard->num_keycodes + 1];
 	memcpy(pressed, dev->keyboard->keycodes,
@@ -236,7 +276,8 @@ static void keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
 		struct wlr_event_keyboard_key event = {
 			.keycode = keycode,
 			.state = WLR_KEY_RELEASED,
-			.time_msec = time,
+			.time_msec = time_nsec / 1000000,
+			.time_nsec = time_nsec,
 			.update_state = false,
 		};
 		wlr_keyboard_notify_key(dev->keyboard, &event);
@@ -245,13 +286,23 @@ static void keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
 
 static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, uint32_t time, uint32_t key, uint32_t state) {
-	struct wlr_input_device *dev = data;
+	struct wlr_wl_input_device *wl_dev = data;
+	struct wlr_input_device *dev = &wl_dev->wlr_input_device;
+	struct wlr_wl_backend *backend = wl_dev->backend;
 	assert(dev && dev->keyboard);
 
+	uint64_t time_nsec;
+	if (backend->zwp_input_timestamps_manager_v1 &&
+			backend->input_timestamps_v1.keyboard.tv_sec == time / 1000) {
+		time_nsec = timespec_to_nsec(backend->input_timestamps_v1.keyboard);
+	} else {
+		time_nsec = time * 1000000;
+	}
 	struct wlr_event_keyboard_key wlr_event = {
 		.keycode = key,
 		.state = state,
 		.time_msec = time,
+		.time_nsec = time_nsec,
 		.update_state = false,
 	};
 	wlr_keyboard_notify_key(dev->keyboard, &wlr_event);
@@ -260,7 +311,8 @@ static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
 static void keyboard_handle_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched,
 		uint32_t mods_locked, uint32_t group) {
-	struct wlr_input_device *dev = data;
+	struct wlr_wl_input_device *wl_dev = data;
+	struct wlr_input_device *dev = &wl_dev->wlr_input_device;
 	assert(dev && dev->keyboard);
 	wlr_keyboard_notify_modifiers(dev->keyboard, mods_depressed, mods_latched,
 		mods_locked, group);
@@ -355,6 +407,7 @@ static void gesture_swipe_begin(void *data,
 	struct wlr_event_pointer_swipe_begin wlr_event = {
 		.device = wlr_dev,
 		.time_msec = time,
+		.time_nsec = time * 1000000,
 		.fingers = fingers,
 	};
 	input_device->fingers = fingers;
@@ -369,6 +422,7 @@ static void gesture_swipe_update(void *data,
 	struct wlr_event_pointer_swipe_update wlr_event = {
 		.device = wlr_dev,
 		.time_msec = time,
+		.time_nsec = time * 1000000,
 		.fingers = input_device->fingers,
 		.dx = wl_fixed_to_double(dx),
 		.dy = wl_fixed_to_double(dy),
@@ -384,6 +438,7 @@ static void gesture_swipe_end(void *data,
 	struct wlr_event_pointer_swipe_end wlr_event = {
 		.device = wlr_dev,
 		.time_msec = time,
+		.time_nsec = time * 1000000,
 		.cancelled = cancelled,
 	};
 	wlr_signal_emit_safe(&wlr_dev->pointer->events.swipe_end, &wlr_event);
@@ -404,6 +459,7 @@ static void gesture_pinch_begin(void *data,
 	struct wlr_event_pointer_pinch_begin wlr_event = {
 		.device = wlr_dev,
 		.time_msec = time,
+		.time_nsec = time * 1000000,
 		.fingers = fingers,
 	};
 	input_device->fingers = fingers;
@@ -418,6 +474,7 @@ static void gesture_pinch_update(void *data,
 	struct wlr_event_pointer_pinch_update wlr_event = {
 		.device = wlr_dev,
 		.time_msec = time,
+		.time_nsec = time * 1000000,
 		.fingers = input_device->fingers,
 		.dx = wl_fixed_to_double(dx),
 		.dy = wl_fixed_to_double(dy),
@@ -435,6 +492,7 @@ static void gesture_pinch_end(void *data,
 	struct wlr_event_pointer_pinch_end wlr_event = {
 		.device = wlr_dev,
 		.time_msec = time,
+		.time_nsec = time * 1000000,
 		.cancelled = cancelled,
 	};
 	wlr_signal_emit_safe(&wlr_dev->pointer->events.pinch_end, &wlr_event);
@@ -459,6 +517,7 @@ static void relative_pointer_handle_relative_motion(void *data,
 	struct wlr_event_pointer_motion wlr_event = {
 		.device = wlr_dev,
 		.time_msec = (uint32_t)(time_usec / 1000),
+		.time_nsec = time_usec * 1000,
 		.delta_x = wl_fixed_to_double(dx),
 		.delta_y = wl_fixed_to_double(dy),
 		.unaccel_dx = wl_fixed_to_double(dx_unaccel),
@@ -471,6 +530,17 @@ static const struct zwp_relative_pointer_v1_listener relative_pointer_listener =
 	.relative_motion = relative_pointer_handle_relative_motion,
 };
 
+static void input_timestamps_v1_handle_timestamp(void *data,
+		struct zwp_input_timestamps_v1 *zwp_input_timestamps_v1,
+		uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec) {
+	struct timespec *timestamp = data;
+	timestamp->tv_sec = ((uint64_t)tv_sec_hi << 32) + tv_sec_lo;
+	timestamp->tv_nsec = tv_nsec;
+}
+
+static const struct zwp_input_timestamps_v1_listener input_timestamps_v1_listener = {
+	.timestamp = input_timestamps_v1_handle_timestamp,
+};
 
 static void pointer_handle_output_destroy(struct wl_listener *listener,
 		void *data) {
@@ -535,6 +605,14 @@ void create_wl_pointer(struct wl_pointer *wl_pointer, struct wlr_wl_output *outp
 			&relative_pointer_listener, dev);
 	}
 
+	if (backend->zwp_input_timestamps_manager_v1 != NULL) {
+		struct zwp_input_timestamps_v1 *input_timestamps =
+			zwp_input_timestamps_manager_v1_get_pointer_timestamps(
+				backend->zwp_input_timestamps_manager_v1, wl_pointer);
+		zwp_input_timestamps_v1_add_listener(input_timestamps, &input_timestamps_v1_listener,
+			&backend->input_timestamps_v1.pointer);
+	}
+
 	wlr_signal_emit_safe(&backend->backend.events.new_input, wlr_dev);
 }
 
@@ -555,8 +633,18 @@ void create_wl_keyboard(struct wl_keyboard *wl_keyboard, struct wlr_wl_backend *
 	}
 	wlr_keyboard_init(wlr_dev->keyboard, NULL);
 
-	wl_keyboard_add_listener(wl_keyboard, &keyboard_listener, wlr_dev);
+	wl_keyboard_add_listener(wl_keyboard, &keyboard_listener, dev);
 	dev->resource = wl_keyboard;
+
+	if (wl->zwp_input_timestamps_manager_v1 != NULL) {
+		struct zwp_input_timestamps_v1 *input_timestamps =
+			zwp_input_timestamps_manager_v1_get_keyboard_timestamps(
+				wl->zwp_input_timestamps_manager_v1, wl_keyboard);
+		zwp_input_timestamps_v1_add_listener(
+			input_timestamps, &input_timestamps_v1_listener,
+			&wl->input_timestamps_v1.keyboard);
+	}
+
 	wlr_signal_emit_safe(&wl->backend.events.new_input, wlr_dev);
 }
 
