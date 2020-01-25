@@ -41,6 +41,7 @@ static void virtual_pointer_motion(struct wl_client *client,
 	struct wlr_event_pointer_motion event = {
 		.device = wlr_dev,
 		.time_msec = time,
+		.time_nsec = time * 1000000,
 		.delta_x = wl_fixed_to_double(dx),
 		.delta_y = wl_fixed_to_double(dy),
 		.unaccel_dx = wl_fixed_to_double(dx),
@@ -64,6 +65,7 @@ static void virtual_pointer_motion_absolute(struct wl_client *client,
 	struct wlr_event_pointer_motion_absolute event = {
 		.device = wlr_dev,
 		.time_msec = time,
+		.time_nsec = time * 1000000,
 		.x = (double)x / x_extent,
 		.y = (double)y / y_extent,
 	};
@@ -82,6 +84,7 @@ static void virtual_pointer_button(struct wl_client *client,
 	struct wlr_event_pointer_button event = {
 		.device = wlr_dev,
 		.time_msec = time,
+		.time_nsec = time * 1000000,
 		.button = button,
 		.state = state ? WLR_BUTTON_PRESSED : WLR_BUTTON_RELEASED
 	};
@@ -106,6 +109,7 @@ static void virtual_pointer_axis(struct wl_client *client,
 	pointer->axis_valid[axis] = true;
 	pointer->axis_event[pointer->axis].device = wlr_dev;
 	pointer->axis_event[pointer->axis].time_msec = time;
+	pointer->axis_event[pointer->axis].time_msec = time * 1000000;
 	pointer->axis_event[pointer->axis].orientation = axis;
 	pointer->axis_event[pointer->axis].delta = wl_fixed_to_double(value);
 }
@@ -170,6 +174,7 @@ static void virtual_pointer_axis_stop(struct wl_client *client,
 	pointer->axis_valid[pointer->axis] = true;
 	pointer->axis_event[pointer->axis].device = wlr_dev;
 	pointer->axis_event[pointer->axis].time_msec = time;
+	pointer->axis_event[pointer->axis].time_msec = time * 1000000;
 	pointer->axis_event[pointer->axis].orientation = axis;
 	pointer->axis_event[pointer->axis].delta = 0;
 	pointer->axis_event[pointer->axis].delta_discrete = 0;
@@ -194,6 +199,7 @@ static void virtual_pointer_axis_discrete(struct wl_client *client,
 	pointer->axis_valid[pointer->axis] = true;
 	pointer->axis_event[pointer->axis].device = wlr_dev;
 	pointer->axis_event[pointer->axis].time_msec = time;
+	pointer->axis_event[pointer->axis].time_msec = time * 1000000;
 	pointer->axis_event[pointer->axis].orientation = axis;
 	pointer->axis_event[pointer->axis].delta = wl_fixed_to_double(value);
 	pointer->axis_event[pointer->axis].delta_discrete = discrete;
