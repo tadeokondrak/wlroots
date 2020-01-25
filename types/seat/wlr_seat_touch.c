@@ -295,6 +295,8 @@ uint32_t wlr_seat_touch_send_down(struct wlr_seat *seat,
 		return 0;
 	}
 
+	wlr_signal_emit_safe(&seat->events.touch_down, NULL);
+
 	uint32_t serial = wlr_seat_client_next_serial(point->client);
 	struct wl_resource *resource;
 	wl_resource_for_each(resource, &point->client->touches) {
@@ -316,6 +318,8 @@ void wlr_seat_touch_send_up(struct wlr_seat *seat, uint32_t time, int32_t touch_
 		return;
 	}
 
+	wlr_signal_emit_safe(&seat->events.touch_up, NULL);
+
 	uint32_t serial = wlr_seat_client_next_serial(point->client);
 	struct wl_resource *resource;
 	wl_resource_for_each(resource, &point->client->touches) {
@@ -334,6 +338,8 @@ void wlr_seat_touch_send_motion(struct wlr_seat *seat, uint32_t time, int32_t to
 		wlr_log(WLR_ERROR, "got touch motion for unknown touch point");
 		return;
 	}
+
+	wlr_signal_emit_safe(&seat->events.touch_motion, NULL);
 
 	struct wl_resource *resource;
 	wl_resource_for_each(resource, &point->client->touches) {

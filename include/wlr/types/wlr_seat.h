@@ -262,6 +262,23 @@ struct wlr_seat {
 		struct wl_signal request_start_drag;
 		struct wl_signal start_drag; // wlr_drag
 
+		/*
+		 * Sent before an event is to the client.
+		 * Intended to implement input_timestamps, where you have to send an
+		 * event right before the corresponding seat event, but only when one
+		 * will be sent (i.e. not when there are grabs in place).
+		 */
+		struct wl_signal pointer_motion;
+		struct wl_signal pointer_button;
+		struct wl_signal pointer_axis;
+		struct wl_signal pointer_axis_stop;
+
+		struct wl_signal keyboard_key;
+
+		struct wl_signal touch_down;
+		struct wl_signal touch_up;
+		struct wl_signal touch_motion;
+
 		struct wl_signal destroy;
 	} events;
 

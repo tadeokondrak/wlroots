@@ -221,6 +221,8 @@ void wlr_seat_pointer_send_motion(struct wlr_seat *wlr_seat, uint32_t time,
 		return;
 	}
 
+	wlr_signal_emit_safe(&wlr_seat->events.pointer_motion, NULL);
+
 	struct wl_resource *resource;
 	wl_resource_for_each(resource, &client->pointers) {
 		if (wlr_seat_client_from_pointer_resource(resource) == NULL) {
@@ -242,6 +244,8 @@ uint32_t wlr_seat_pointer_send_button(struct wlr_seat *wlr_seat, uint32_t time,
 		return 0;
 	}
 
+	wlr_signal_emit_safe(&wlr_seat->events.pointer_button, NULL);
+
 	uint32_t serial = wlr_seat_client_next_serial(client);
 	struct wl_resource *resource;
 	wl_resource_for_each(resource, &client->pointers) {
@@ -260,6 +264,12 @@ void wlr_seat_pointer_send_axis(struct wlr_seat *wlr_seat, uint32_t time,
 	struct wlr_seat_client *client = wlr_seat->pointer_state.focused_client;
 	if (client == NULL) {
 		return;
+	}
+
+	if (value) {
+		wlr_signal_emit_safe(&wlr_seat->events.pointer_axis, NULL);
+	} else {
+		wlr_signal_emit_safe(&wlr_seat->events.pointer_axis_stop, NULL);
 	}
 
 	struct wl_resource *resource;

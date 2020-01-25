@@ -293,6 +293,17 @@ struct wlr_seat *wlr_seat_create(struct wl_display *display, const char *name) {
 	wl_signal_init(&seat->events.touch_grab_begin);
 	wl_signal_init(&seat->events.touch_grab_end);
 
+	wl_signal_init(&seat->events.pointer_motion);
+	wl_signal_init(&seat->events.pointer_button);
+	wl_signal_init(&seat->events.pointer_axis);
+	wl_signal_init(&seat->events.pointer_axis_stop);
+
+	wl_signal_init(&seat->events.keyboard_key);
+
+	wl_signal_init(&seat->events.touch_down);
+	wl_signal_init(&seat->events.touch_up);
+	wl_signal_init(&seat->events.touch_motion);
+
 	wl_signal_init(&seat->events.destroy);
 
 	seat->display_destroy.notify = handle_display_destroy;

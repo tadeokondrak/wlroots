@@ -72,6 +72,8 @@ void wlr_seat_keyboard_send_key(struct wlr_seat *wlr_seat, uint32_t time,
 		return;
 	}
 
+	wlr_signal_emit_safe(&wlr_seat->events.keyboard_key, NULL);
+
 	uint32_t serial = wlr_seat_client_next_serial(client);
 	struct wl_resource *resource;
 	wl_resource_for_each(resource, &client->keyboards) {
